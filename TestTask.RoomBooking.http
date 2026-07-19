@@ -1,0 +1,6 @@
+@TestTask.RoomBooking_HostAddress = http://localhost:5153
+
+GET {{TestTask.RoomBooking_HostAddress}}/
+Accept: application/json
+
+###
