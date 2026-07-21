@@ -56,7 +56,7 @@ namespace TestTask.RoomBooking.Controllers
                     .ToListAsync();
 
             var invalidIds = roomRequest.AmenityIds.Except(matchedAmenities.Select(a => a.Id));
-            
+
             if (invalidIds.Any())
             {
                 return BadRequest($"Invalid Amenity IDs: {string.Join(", ", invalidIds)}");
@@ -89,5 +89,24 @@ namespace TestTask.RoomBooking.Controllers
 
             return CreatedAtAction(nameof(GetById), new { id = room.Id }, roomResponse);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (room == null)
+            {
+                return NotFound();
+            }
+
+            _context.Rooms.Remove(room);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
+
 }
+
