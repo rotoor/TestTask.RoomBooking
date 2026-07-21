@@ -6,23 +6,32 @@ public static class DbSeeder
 {
     public static void Seed(AppDbContext db)
     {
-        if (!db.Rooms.Any())
+        if (db.Rooms.Any())
         {
-            db.Rooms.AddRange(
-                new Room { Name = "Зал А", Capacity = 50, BaseHourlyPrice = 2000 },
-                new Room { Name = "Зал B", Capacity = 100, BaseHourlyPrice = 3500 },
-                new Room { Name = "Зал C", Capacity = 30, BaseHourlyPrice = 1500 }
-            );
+            return;
         }
 
-        if (!db.Amenities.Any())
-        {
-            db.Amenities.AddRange(
-                new Amenity { Name = "Проєктор", Price = 500 },
-                new Amenity { Name = "Wi-Fi", Price = 300 },
-                new Amenity { Name = "Звук", Price = 700 }
-            );
-        }
+        var roomA = new Room { Name = "Зал А", Capacity = 50, BaseHourlyPrice = 2000 };
+        var roomB = new Room { Name = "Зал B", Capacity = 100, BaseHourlyPrice = 3500 };
+        var roomC = new Room { Name = "Зал C", Capacity = 30, BaseHourlyPrice = 1500 };
+
+        db.Rooms.AddRange(roomA, roomB, roomC);
+
+        var projector = new Amenity { Name = "Проєктор", Price = 500 };
+        var wifi = new Amenity { Name = "Wi-Fi", Price = 300 };
+        var sound = new Amenity { Name = "Звук", Price = 700 };
+
+        db.Amenities.AddRange(projector, wifi, sound);
+
+        db.SaveChanges();
+
+        db.RoomAmenities.AddRange(
+            new RoomAmenity { RoomId = roomA.Id, AmenityId = projector.Id },
+            new RoomAmenity { RoomId = roomA.Id, AmenityId = wifi.Id },
+            new RoomAmenity { RoomId = roomB.Id, AmenityId = wifi.Id },
+            new RoomAmenity { RoomId = roomB.Id, AmenityId = sound.Id },
+            new RoomAmenity { RoomId = roomC.Id, AmenityId = wifi.Id }
+        );
 
         db.SaveChanges();
     }

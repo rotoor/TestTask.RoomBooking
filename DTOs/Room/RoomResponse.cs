@@ -1,10 +1,10 @@
 ﻿namespace TestTask.RoomBooking.DTOs.Room;
 
-public class RoomResponce
+public class RoomResponse
 {
-    public int RoomId { get; set; }
+    public int Id { get; set; }
     public string Name { get; set; } = "";
     public int Capacity { get; set; }
     public decimal BaseHourlyPrice { get; set; }
-    public ICollection<int> AmenityIds { get; set; } = [];
+    public ICollection<AmenityResponse> Amenities { get; set; } = [];
 }
