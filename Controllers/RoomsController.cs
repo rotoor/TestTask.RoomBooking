@@ -90,6 +90,58 @@ namespace TestTask.RoomBooking.Controllers
             return CreatedAtAction(nameof(GetById), new { id = room.Id }, roomResponse);
         }
 
+        [HttpPut("{id}")]
+        public async Task<ActionResult<RoomResponse>> Update(int id, UpdateRoomRequest roomRequest)
+        {
+            var room = await _context.Rooms
+                .Include(r => r.RoomAmenities)
+                .ThenInclude(ra => ra.Amenity)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (room == null)
+            {
+                return NotFound();
+            }
+
+            var matchedAmenities = await _context.Amenities
+                .Where(a => roomRequest.AmenityIds.Contains(a.Id))
+                .ToListAsync();
+
+            var invalidIds = roomRequest.AmenityIds.Except(matchedAmenities.Select(a => a.Id));
+
+            if (invalidIds.Any())
+            {
+                return BadRequest($"Invalid Amenity IDs: {string.Join(", ", invalidIds)}");
+            }
+
+            room.Name = roomRequest.Name;
+            room.Capacity = roomRequest.Capacity;
+            room.BaseHourlyPrice = roomRequest.BaseHourlyPrice;
+            
+            _context.RoomAmenities.RemoveRange(room.RoomAmenities);
+            room.RoomAmenities = roomRequest.AmenityIds
+                .Select(aid => new RoomAmenity { RoomId = room.Id, AmenityId = aid })
+                .ToList();
+
+            await _context.SaveChangesAsync();
+
+            var roomResponse = new RoomResponse
+            {
+                Id = room.Id,
+                Name = room.Name,
+                Capacity = room.Capacity,
+                BaseHourlyPrice = room.BaseHourlyPrice,
+                Amenities = matchedAmenities.Select(a => new AmenityResponse
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    Price = a.Price
+                }).ToList()
+            };
+
+            return Ok(roomResponse);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
