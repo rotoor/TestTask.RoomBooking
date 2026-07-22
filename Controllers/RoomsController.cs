@@ -26,7 +26,7 @@ namespace TestTask.RoomBooking.Controllers
                 .Include(r => r.RoomAmenities)
                 .ThenInclude(ra => ra.Amenity)
                 .ToListAsync();
-            
+
             var roomsResponse = rooms.Select(r => new RoomResponse
             {
                 Id = r.Id,
@@ -40,7 +40,7 @@ namespace TestTask.RoomBooking.Controllers
                     Price = ra.Amenity.Price,
                 }).ToList()
             }).ToList();
-            
+
             return Ok(roomsResponse);
         }
 
@@ -48,6 +48,7 @@ namespace TestTask.RoomBooking.Controllers
         public async Task<ActionResult<RoomResponse>> GetById(int id)
         {
             var room = await _context.Rooms
+                .AsNoTracking()
                 .Include(r => r.RoomAmenities)
                 .ThenInclude(ra => ra.Amenity)
                 .FirstOrDefaultAsync(r => r.Id == id);
@@ -77,13 +78,9 @@ namespace TestTask.RoomBooking.Controllers
         [HttpPost]
         public async Task<ActionResult<RoomResponse>> Create(CreateRoomRequest roomRequest)
         {
-            var matchedAmenities = await _context.Amenities
-                    .Where(a => roomRequest.AmenityIds.Contains(a.Id))
-                    .ToListAsync();
+            var (matchedAmenities, invalidIds) = await ValidateAmenityIds(roomRequest.AmenityIds);
 
-            var invalidIds = roomRequest.AmenityIds.Except(matchedAmenities.Select(a => a.Id));
-
-            if (invalidIds.Any())
+            if (invalidIds.Count > 0)
             {
                 return BadRequest($"Invalid Amenity IDs: {string.Join(", ", invalidIds)}");
             }
@@ -129,13 +126,9 @@ namespace TestTask.RoomBooking.Controllers
                 return NotFound();
             }
 
-            var matchedAmenities = await _context.Amenities
-                .Where(a => roomRequest.AmenityIds.Contains(a.Id))
-                .ToListAsync();
+            var (matchedAmenities, invalidIds) = await ValidateAmenityIds(roomRequest.AmenityIds);
 
-            var invalidIds = roomRequest.AmenityIds.Except(matchedAmenities.Select(a => a.Id));
-
-            if (invalidIds.Any())
+            if (invalidIds.Count > 0)
             {
                 return BadRequest($"Invalid Amenity IDs: {string.Join(", ", invalidIds)}");
             }
@@ -143,7 +136,7 @@ namespace TestTask.RoomBooking.Controllers
             room.Name = roomRequest.Name;
             room.Capacity = roomRequest.Capacity;
             room.BaseHourlyPrice = roomRequest.BaseHourlyPrice;
-            
+
             _context.RoomAmenities.RemoveRange(room.RoomAmenities);
             room.RoomAmenities = roomRequest.AmenityIds
                 .Select(aid => new RoomAmenity { RoomId = room.Id, AmenityId = aid })
@@ -184,7 +177,18 @@ namespace TestTask.RoomBooking.Controllers
 
             return NoContent();
         }
-    }
 
+        private async Task<(List<Amenity> matchedAmenities, List<int> invalidIds)> ValidateAmenityIds(
+            ICollection<int> amenityIds)
+        {
+            var matchedAmenities = await _context.Amenities
+                .Where(a => amenityIds.Contains(a.Id))
+                .ToListAsync();
+
+            var invalidIds = amenityIds.Except(matchedAmenities.Select(a => a.Id)).ToList();
+            return (matchedAmenities, invalidIds);
+        }
+
+    }
 }
 
