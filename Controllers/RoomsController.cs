@@ -18,6 +18,32 @@ namespace TestTask.RoomBooking.Controllers
             _context = context;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<RoomResponse>>> GetAll()
+        {
+            var rooms = await _context.Rooms
+                .AsNoTracking()
+                .Include(r => r.RoomAmenities)
+                .ThenInclude(ra => ra.Amenity)
+                .ToListAsync();
+            
+            var roomsResponse = rooms.Select(r => new RoomResponse
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Capacity = r.Capacity,
+                BaseHourlyPrice = r.BaseHourlyPrice,
+                Amenities = r.RoomAmenities.Select(ra => new AmenityResponse
+                {
+                    Id = ra.Amenity.Id,
+                    Name = ra.Amenity.Name,
+                    Price = ra.Amenity.Price,
+                }).ToList()
+            }).ToList();
+            
+            return Ok(roomsResponse);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<RoomResponse>> GetById(int id)
         {
