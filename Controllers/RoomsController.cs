@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TestTask.RoomBooking.Data;
 using TestTask.RoomBooking.DTOs.Room;
 using TestTask.RoomBooking.Models;
+using TestTask.RoomBooking.Services;
 
 
 namespace TestTask.RoomBooking.Controllers
@@ -12,10 +13,12 @@ namespace TestTask.RoomBooking.Controllers
     public class RoomsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IAvailabilityService _availabilityService;
 
-        public RoomsController(AppDbContext context)
+        public RoomsController(AppDbContext context, IAvailabilityService availabilityService)
         {
             _context = context;
+            _availabilityService = availabilityService;
         }
 
         [HttpGet]
@@ -177,6 +180,30 @@ namespace TestTask.RoomBooking.Controllers
 
             return NoContent();
         }
+        [HttpGet("available")]
+        public async Task<ActionResult<ICollection<RoomResponse>>> GetAvailable(
+            [FromQuery] DateTime startTime,
+            [FromQuery] DateTime endTime,
+            [FromQuery] int minCapacity)
+        {
+            var rooms = await _availabilityService.GetAvailableRoomsAsync(startTime, endTime, minCapacity);
+
+            var roomsResponse = rooms.Select(r => new RoomResponse
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Capacity = r.Capacity,
+                BaseHourlyPrice = r.BaseHourlyPrice,
+                Amenities = r.RoomAmenities.Select(ra => new AmenityResponse
+                {
+                    Id = ra.Amenity.Id,
+                    Name = ra.Amenity.Name,
+                    Price = ra.Amenity.Price,
+                }).ToList()
+            }).ToList();
+
+            return Ok(roomsResponse);
+        }
 
         private async Task<(List<Amenity> matchedAmenities, List<int> invalidIds)> ValidateAmenityIds(
             ICollection<int> amenityIds)
@@ -188,7 +215,6 @@ namespace TestTask.RoomBooking.Controllers
             var invalidIds = amenityIds.Except(matchedAmenities.Select(a => a.Id)).ToList();
             return (matchedAmenities, invalidIds);
         }
-
     }
 }
 
